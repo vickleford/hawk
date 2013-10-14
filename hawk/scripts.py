@@ -154,7 +154,39 @@ def hose(driver, args):
             
         for c in driver.list_checks(e):
             driver.delete_check(c)
+            
+            
+def lstoks(driver, args):
+    tmpl = '{:<26}{:<71}'
+    for tok in driver.list_agent_tokens():
+        try:
+            print(tmpl.format(tok.label[:25], tok.id))
+        except TypeError:
+            print(tmpl.format('(no label)', tok.id))
 
+
+def mktok(driver, args):
+    payload = {}
+    
+    if args.who:
+        payload.update({'who': args.who})
+    if args.why:
+        payload.update({'why': args.why})
+        
+    driver.create_agent_token(label=args.label)
+    
+    
+def rmtok(driver, args):
+    token = driver.get_agent_token(args.token_id)
+    payload = {}
+    
+    if args.who:
+        payload.update({'who': args.who})
+    if args.why:
+        payload.update({'why': args.why})
+        
+    driver.delete_agent_token(token, **payload)
+    
 
 def spawn():
     parser = argparse.ArgumentParser(description="Manage your Rackspace Cloud Monitors.")
@@ -194,6 +226,17 @@ def spawn():
     parser_ho = subparsers.add_parser('hose', help='Hose all the checks and alarm on one or more entity IDs')
     parser_ho.add_argument('ents', nargs='+', help='Entity IDs to erase checks and alarms on')
     parser_ho.set_defaults(func=hose)
+    
+    parser_lstoks = subparsers.add_parser('list-tokens', help='List monitoring agent tokens')
+    parser_lstoks.set_defaults(func=lstoks)
+    
+    parser_mktok = subparsers.add_parser('create-token', help='Create a monitoring agent token')
+    parser_mktok.add_argument('-l', '--label', default=None, help='Label your new monitoring agent token')
+    parser_mktok.set_defaults(func=mktok)
+    
+    parser_rmtok = subparsers.add_parser('delete-token', help='Delete a monitoirng agent token')
+    parser_rmtok.add_argument('token_id', help='Token ID to delete')
+    parser_rmtok.set_defaults(func=rmtok)
 
     args = parser.parse_args()
 

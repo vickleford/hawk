@@ -1,0 +1,135 @@
+base:
+    checks: &base_checks
+        disk:
+            label: "Disk Check"
+            type: agent.disk
+            details:
+              target: /dev/xvda1
+        memory:
+            label: "Memory Check"
+            type: agent.memory
+        network_eth0:
+            label: "eth0 Check"
+            type: agent.network
+            details:
+              target: eth0
+        network_eth1:
+            label: "eth1 Check"
+            type: agent.network
+            details:
+              target: eth1
+        network_eth2:
+            label: "eth2 Check"
+            type: agent.network
+            details:
+              target: eth2
+        load_average:
+            label: "Load Average Check"
+            type: agent.load_average
+        filesystem:
+            label: "Filesystem Check"
+            type: agent.filesystem
+            details:
+              target: /
+        cpu:
+            label: "CPU Check"
+            type: agent.cpu
+        ping:
+            label: "Ping Check"
+            type: remote.ping
+            target_alias: public0_v4
+            monitoring_zones: &mzall
+                - mzdfw
+                - mzord
+                - mziad
+                - mzlon
+                - mzhkg
+                - mzsyd
+        ssh:
+            type: remote.ssh
+            monitoring_zones: *mzall
+            target_alias: public0_v4
+
+    alarms: &base_alarms
+        ssh:
+            label: SSH
+            criteria: |
+                if (previous(metric["fingerprint"]) != metric["fingerprint"]) {
+                    return new AlarmStatus(WARNING, "SSH fingerprint changed to #{fingerprint}");
+                }
+        memory:
+            label: Memory
+            criteria: |
+                if (percentage(metric["actual_free"], metric["total"]) <= 20) {
+                    return new AlarmStatus(WARNING, "Actual free RAM too low: #{actual_free} bytes");
+                }
+                if (percentage(metric["swap_free"], metric["swap_total"]) <= 20) {
+                    return new AlarmStatus(WARNING,"Free swap too low: #{swap_free} bytes");
+                }
+                return new AlarmStatus(OK);
+        load_average:
+            label: Load Average
+            criteria: |
+                if (metric["5m"] > 4) {
+                    return new AlarmStatus(WARNING, "Load Average increased to #{5m}");
+                }
+                return new AlarmStatus(OK);
+        filesystem:
+            label: Filesystem
+            criteria: |
+                if (percentage(metric["free_files"], metric["files"]) <= 20) {
+                    return new AlarmStatus(WARNING, "inodes usage exceeded 80%");
+                }
+                if (percentage(metric["avail"], metric["total"]) <= 20) {
+                    return new AlarmStatus(WARNING, "Disk usage exceeded 80%");
+                }
+                return new AlarmStatus(OK);
+        cpu:
+            label: CPU
+            criteria: |
+                if ((metric["max_cpu_usage"] >= 95) && (metric["min_cpu_usage"] <= 10)) {
+                    return new AlarmStatus(WARNING, "Possible runaway process detected");
+                }
+                if (metric["wait_percent_average"] >= 65) {
+                    return new AlarmStatus(WARNING, "Detected high wait status: #{wait_percent_average}%");
+                }
+                if (metric["usage_average"] >= 90) {
+                    return new AlarmStatus(WARNING, "Usage average reached #{usage_average}%");
+                }
+                return new AlarmStatus(OK, "CPU usage stabilized");
+        ping:
+            label: Ping
+            criteria: |
+                :set consecutiveCount=3
+                if (metric["available"] >= 80) {
+                    return new AlarmStatus(OK, "Back to #{available}% success rate"); 
+                }
+                if (metric["available"] >= 60) {
+                    return new AlarmStatus(WARNING, "Getting #{available}% packet loss");
+                }
+                return new AlarmStatus(CRITICAL, "Getting #{available}% packet loss");
+
+search:
+    checks:
+        <<: *base_checks
+        cluster_health:
+            label: "ES Cluster"
+            type: agent.plugin
+            details:
+              filename: elasticsearch.py
+              args: [ '--cluster-health' ]
+    alarms:
+        <<: *base_alarms
+        cluster_health:
+            label: ES Cluster
+            criteria: |
+                if (metric["status"] == "red") {
+                    return new AlarmStatus(CRITICAL);
+                }
+                if (metric["status"] == "yellow") {
+                    return new AlarmStatus(WARNING);
+                }
+                if (metric["status"] == "green") {
+                    return new AlarmStatus(OK);
+                }
+

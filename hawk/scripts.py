@@ -28,7 +28,11 @@ from config import config
 
 
 def setpass(driver, args):
-    password = getpass("API Key: ")
+    if args.key:
+        password = args.key
+    else:
+        password = getpass("API Key: ")
+    
     set_password('hawk', args.account, password)
 
 
@@ -196,6 +200,7 @@ def spawn():
     subparsers = parser.add_subparsers()
     
     parser_pw = subparsers.add_parser('passwd', help='Set or update password for account')
+    parser_pw.add_argument('-k', '--key', default=None, help='Provide API key as an arg instead of asking for input')
     parser_pw.set_defaults(func=setpass)
     
     parser_lsents = subparsers.add_parser('list-entities', help='')

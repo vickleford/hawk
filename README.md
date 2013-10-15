@@ -39,6 +39,8 @@ As an example, the API documentation lists attributes for creating a check: type
 
 If we wanted to create a CPU check, we would follow the API docs to Agent Check Types to find out what details go into our CPU check. There are no additional attributes specific to CPU checks, so we can omit the details section. Our YAML would begin to look something like:
 
+    # ~/.config/hawk.yaml
+    
     profile_name:
         checks:
             arbitrary_check_name:
@@ -48,6 +50,8 @@ If we wanted to create a CPU check, we would follow the API docs to Agent Check 
                 
 By that same standard, if we wanted to create an agent.disk check, which does have specific attributes to that type of check, our YAML could be extended to look like:
 
+    # ~/.config/hawk.yaml
+    
     profile_name:
         checks:
             arbitrary_check_name:
@@ -65,6 +69,8 @@ The same exact principle can be used for alarms. When creating alarms, match the
 
 If we wanted to receive an alarm notification when our CPU usage exceeded 90%, we could do something like this:
 
+    # ~/.config/hawk.yaml
+    
     profile_name:
         checks:
             arbitrary_check_name:
@@ -119,20 +125,23 @@ To view all notifications and notification plans available to you,
     
 Notice how notification plans are made up of notifications.
 
-### Notifications
+#### Notifications
 
 To create a notification, choose between 3 types: email, pagerduty, or webhook. Unfortunately, the usage of pagerduty wasn't clear at the time of this writing. 
 
-    hawk account_name1 create-notification label email team@example.org
+    $ hawk account_name1 create-notification label email team@example.org
+    $
 
 Example 2 with a webhook
 
-    hawk account_name1 create-notification label webhook http://www.example.org/
+    $ hawk account_name1 create-notification label webhook http://www.example.org/
+    $
     
 When using webhook notifications, MaaS will POST to the URL you specify with interesting information about what happened. See the API documentation about [Notification Types](http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notification-types-crud.html)
     
-### Notification Plans
+#### Notification Plans
 
 To create a notification plan, gather all the notification IDs (referenced as npX1, npX2, ... npXT) you want to include in the plan. Specify the desired notification IDs for the alarm statuses. Each status can contain multiple notification IDs and no two statuses need to contain the same IDs (but it may be a good idea to make them consistent).
 
-hawk account_name1 create-notification-plan --ok npX1 --critical npX1 --warning npX1 some_label_name
+    $ hawk account_name1 create-notification-plan --ok npX1 --critical npX1 --warning npX1 some_label_name
+    $

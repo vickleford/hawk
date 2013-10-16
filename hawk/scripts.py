@@ -39,7 +39,7 @@ def setpass(driver, args):
 def list_entities(driver, args):
     row = '{:<15}{:<40}{:<40}'
     print(row.format('ID', 'Label', 'Agent ID'))
-    for ent in driver.list_entities():
+    for ent in sorted(driver.list_entities(), key=lambda ent: ent.label):
         print(row.format(ent.id, ent.label, ent.agent_id))
         
         

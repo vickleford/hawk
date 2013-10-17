@@ -27,6 +27,25 @@ from getpass import getpass
 from config import config
 
 
+def _th(title, char = '_', width=80, indent=3):
+    '''Print a table header.'''
+    
+    pad_left = width - indent - len(title)
+    print('{0}{1}{2}'.format(char * indent, title, char * pad_left))
+    
+
+def _tr(width=80):
+    '''Print a table row.'''
+    
+    pass
+    
+    
+def _tf(char='-', width=80):
+    '''Print a table footer.'''
+    
+    print(char * width)
+
+
 def setpass(driver, args):
     if args.key:
         password = args.key
@@ -191,11 +210,62 @@ def rmtok(driver, args):
         
     driver.delete_agent_token(token, **payload)
     
+    
+def lschecks(driver, args):
+    width = 80
+    fmt = '| {:<18}| {:<57}|'
+    for ent in args.ents:
+        entity = driver.get_entity(ent)
+        checks = driver.list_checks(entity)
+        for c in sorted(checks, key=lambda ch: ch.label):
+            _th('{0} ({1})'.format(entity.id, entity.label))
+            print(fmt.format('ID', c.id))
+            print(fmt.format('Label', c.label))
+            print(fmt.format('Type', c.type))
+            if args.verbose >= 1:
+                print(fmt.format('Period', c.period))
+                print(fmt.format('Timeout', c.timeout))
+                print(fmt.format('Disabled', c.disabled))
+            if args.verbose >= 2:
+                print(fmt.format('Target Alias', c.target_alias))
+                print(fmt.format('Target Resolver', c.target_resolver))
+                try:
+                    mz = ' '.join(c.monitoring_zones)
+                except TypeError:
+                    mz = 'None'
+                print(fmt.format('Monitoring Zones', mz))
+            if args.verbose >= 1 and len(c.details) > 0:
+                #print('{0}{1}{2}'.format('-' * 3, 'Details', '-' * (80 - 3 - len('Details'))))
+                _th('Details', char='-')
+                for k, v in c.details.iteritems():
+                    print(fmt.format(k, v))
+            _tf()
+            print('')
+
+
+def lsalarms(driver, args):
+    fmt = '| {:<18}| {:<57}|'
+    for ent in args.ents:
+        entity = driver.get_entity(ent)
+        alarms = driver.list_alarms(entity)
+        for a in sorted(alarms, key=lambda al: al.label):
+            _th('{0} ({1})'.format(entity.id, entity.label))
+            print(fmt.format('ID', a.id))
+            print(fmt.format('Label', a.label))
+            print(fmt.format('Check', a.check_id))
+            print(fmt.format('Notification Plan', a.notification_plan_id))
+            _tf()
+            if args.verbose >= 1:
+                print('Criteria:')
+                print(a.criteria)
+            print('')
+    
 
 def spawn():
     parser = argparse.ArgumentParser(description="Manage your Rackspace Cloud Monitors.")
     parser.add_argument('--who', default=None, help='Who is making the change (for auditing)')
     parser.add_argument('--why', default=None, help='Why the change is being made (for auditing)')
+    parser.add_argument('-v', '--verbose', action='count', help='Increase output verbosity')
     parser.add_argument('account', help="Account name to manage")
     subparsers = parser.add_subparsers()
     
@@ -242,6 +312,14 @@ def spawn():
     parser_rmtok = subparsers.add_parser('delete-token', help='Delete a monitoirng agent token')
     parser_rmtok.add_argument('token_id', help='Token ID to delete')
     parser_rmtok.set_defaults(func=rmtok)
+    
+    parser_lschks = subparsers.add_parser('list-checks', help='List all checks on a series of entities')
+    parser_lschks.add_argument('ents', nargs='+', help='Entity IDs to list checks on')
+    parser_lschks.set_defaults(func=lschecks)
+    
+    parser_lsalms = subparsers.add_parser('list-alarms', help='List all alarms on a series of entities')
+    parser_lsalms.add_argument('ents', nargs='+', help='Entity IDs to list alarms on')
+    parser_lsalms.set_defaults(func=lsalarms)
 
     args = parser.parse_args()
 

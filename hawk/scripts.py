@@ -132,6 +132,9 @@ def apply(driver, args):
         except:
             continue
             
+        checks_exist = driver.list_checks(e)
+        alarms_exist = driver.list_alarms(e)
+            
         for check in checks:
             payload = checks[check]
             
@@ -139,32 +142,44 @@ def apply(driver, args):
                 payload.update({'who': args.who})
             if args.why:
                 payload.update({'why': args.why})
-                
-            try:
-                chk = driver.create_check(e, **payload)
-            except Exception as err:
-                print "in check", check, ": ", err
-                print payload
-                continue
+            
+            for ce in checks_exist:
+                if checks[check]['label'] == ce.label:
+                    chk = driver.update_check(ce, payload)
+                    break
+            else:    
+                try:
+                    chk = driver.create_check(e, **payload)
+                except Exception as err:
+                    print "in check", check, ": ", err
+                    print payload
+                    continue
             
             if check in alarms:
+                # this check needs an associated alarm created or updated
                 alarm_payload = alarms[check]
                 
                 alarm_payload.update({'check_id': chk.id, 'notification_plan_id': args.plan})
-                
+
                 if args.who:
                     alarm_payload.update({'who': args.who})
                 if args.why:
                     alarm_payload.update({'why': args.why})
                 
-                try:
-                    driver.create_alarm(e, **alarm_payload)
-                except Exception as err:
-                    print "in alarm for check", check, ": ", err
-                    print alarm_payload
-                    continue
+                for al in alarms_exist:
+                    if alarm_payload['label'] in al.label:
+                        alarm_payload.pop('check_id')  # check_id is immutable 
+                        driver.update_alarm(al, alarm_payload)
+                        break
+                else:
+                    try:
+                        driver.create_alarm(e, **alarm_payload)
+                    except Exception as err:
+                        print "in alarm for check", check, ": ", err
+                        print alarm_payload
+                        continue
 
-                
+
 def hose(driver, args):
     for ent in args.ents:
         try:
@@ -259,7 +274,7 @@ def lsalarms(driver, args):
                 print('Criteria:')
                 print(a.criteria)
             print('')
-    
+
 
 def spawn():
     parser = argparse.ArgumentParser(description="Manage your Rackspace Cloud Monitors.")

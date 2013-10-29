@@ -4,9 +4,11 @@ The primary goal of hawk is to ease the setup of your checks and alarms in Racks
 
 ## Installation
 
-Sorry, not available over PyPI yet ;(
+Install from PyPI
 
-Just grab it from GitHub and install it.
+    pip install hawk
+
+Or grab it from GitHub and install it.
 
 	$ git clone https://github.com/vickleford/hawk
 	...
